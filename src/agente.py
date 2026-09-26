@@ -1,14 +1,20 @@
 from src.algoritmos.bfs import busqueda_bfs
 from src.algoritmos.dfs import busqueda_dfs
+from src.algoritmos.astar import busqueda_astar
+from src.algoritmos.greedy import busqueda_greedy
 from src.base_map.celda import EstadoCelda
 
 
 class Agente:
+    """
+    Representa un agente de búsqueda para la simulación de escape de incendio.
+    Posee dos flags booleanas que determinan el éxito o fracaso en el escape.
+    """
 
     def __init__(self, id_agente, mapa, posicion_inicial=None):
         self.id_agente = id_agente
         self.mapa = mapa
-       
+
         self.posicion_actual = posicion_inicial if posicion_inicial else mapa.inicio
         self.camino = []
         self.costo_total = 0
@@ -37,6 +43,10 @@ class Agente:
         return self.inhabilitado
 
     def obtener_movimientos_validos(self):
+        """
+        Retorna las posiciones vecinas válidas a las que se puede mover el agente.
+        Si el agente está inhabilitado, no puede realizar ningún movimiento.
+        """
         if self.verificar_estado():
             return []
 
@@ -50,6 +60,7 @@ class Agente:
             if celda and celda.obtener_costo() != float('inf'):
                 movimientos.append((nr, nc))
 
+        # Opción de esperar en la celda actual si la celda no es letal
         celda_actual = self.mapa.obtener_celda(r, c)
         if celda_actual and celda_actual.obtener_costo() != float('inf'):
             movimientos.append((r, c))
@@ -57,17 +68,23 @@ class Agente:
         return movimientos
 
     def buscar_camino(self, algoritmo="bfs"):
+        """
+        Ejecuta el algoritmo de búsqueda especificado desde la posición actual del agente.
+        """
         if self.verificar_estado():
             return {"exito": False, "camino": [], "costo_total": float('inf'), "nodos_visitados": 0, "mensaje": "Agente inhabilitado por fuego"}
 
         algoritmos_disponibles = {
             "bfs": busqueda_bfs,
-            "dfs": busqueda_dfs
+            "dfs": busqueda_dfs,
+            "astar": busqueda_astar,
+            "a*": busqueda_astar,
+            "greedy": busqueda_greedy
         }
 
         nombre_alg = algoritmo.lower()
         if nombre_alg not in algoritmos_disponibles:
-            raise ValueError(f"Algoritmo '{algoritmo}' no reconocido. Opciones: {list(algoritmos_disponibles.keys())}")
+            raise ValueError(f"Algoritmo '{algoritmo}' no reconocido. Opciones disponibles: 'bfs', 'dfs', 'astar', 'greedy'")
 
         funcion_busqueda = algoritmos_disponibles[nombre_alg]
         resultado = funcion_busqueda(self.mapa, inicio=self.posicion_actual)
@@ -79,6 +96,9 @@ class Agente:
         return resultado
 
     def esperar(self):
+        """
+        EL agente permanece en la posición actual durante 1 turno.
+        """
         if self.verificar_estado():
             return False
 
@@ -88,6 +108,9 @@ class Agente:
         return True
 
     def mover_a(self, nueva_posicion):
+        """
+        Determina el movimiento del agente a una nueva celda o si debe esperar
+        """
         if self.verificar_estado():
             return False
 
@@ -102,8 +125,10 @@ class Agente:
                 celda_actual.remover_agente()
             
             self.posicion_actual = nueva_posicion
+            
             if self.verificar_estado():
                 return False
+
             if nueva_posicion == self.mapa.salida:
                 self.ha_escapado = True
                 

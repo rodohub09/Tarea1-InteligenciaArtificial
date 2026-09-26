@@ -4,12 +4,6 @@ from src.base_map.celda import EstadoCelda
 def busqueda_dfs(mapa, inicio=None):
     """
     Ejecuta el algoritmo de Búsqueda en Profundidad (DFS).
-    Movimientos ortogonales: Arriba (-1,0), Abajo (1,0), Izquierda (0,-1), Derecha (0,1).
-    Retorna un diccionario con el resultado de la búsqueda:
-    - 'exito': bool
-    - 'camino': list de tuplas (fila, columna) desde inicio hasta salida
-    - 'costo_total': costo acumulado del camino
-    - 'nodos_visitados': cantidad de nodos explorados
     """
     pos_inicio = inicio if inicio else mapa.inicio
     salida = mapa.salida
@@ -21,13 +15,11 @@ def busqueda_dfs(mapa, inicio=None):
     pila = [(pos_inicio, [pos_inicio], 0)]
     visitados = set([pos_inicio])
 
-    # 4 Direcciones ortogonales: Arriba, Abajo, Izquierda, Derecha
     movimientos = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
     while pila:
         pos_actual, camino, costo = pila.pop()
 
-        # Si llegamos a la salida
         if pos_actual == salida:
             return {
                 "exito": True,
@@ -50,7 +42,7 @@ def busqueda_dfs(mapa, inicio=None):
                 continue
 
             estado = celda.obtener_estado()
-            # Verificar si la celda es transitable (no es muro, fuego u ocupado)
+            # Verificar si la celda es transitable
             if estado not in [EstadoCelda.MURO, EstadoCelda.FUEGO, EstadoCelda.OCUPADO]:
                 visitados.add(pos_vecino)
                 costo_paso = celda.obtener_costo()

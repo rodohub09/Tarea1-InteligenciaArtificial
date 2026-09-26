@@ -91,35 +91,32 @@ class Mapa:
     def propagar_fuego(self):
         """
         Expande el fuego a todas las celdas vecinas tipo PASILLO en direcciones ortogonales
-        a 1 de distancia (Arriba, Abajo, Izquierda, Derecha).
-        Retorna la lista de celdas recién incendiadas.
+        a 1 de distancia
         """
         nuevas_celdas_fuego = []
         movimientos = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-        # 1. Identificar todas las celdas actualmente en estado FUEGO
+        # Identifica todas las celdas actualmente en estado FUEGO
         celdas_fuego_actuales = []
         for r in range(self.filas):
             for c in range(self.columnas):
                 if self.matriz[r][c].estado_base == EstadoCelda.FUEGO:
                     celdas_fuego_actuales.append((r, c))
 
-        # 2. Propagar a celdas pasillo adyacentes a distancia 1
+        # Propaga el fuego a celdas pasillo adyacentes a distancia 1
         for r, c in celdas_fuego_actuales:
             for dr, dc in movimientos:
                 nr, nc = r + dr, c + dc
                 celda_vecina = self.obtener_celda(nr, nc)
                 
-                # Solo se pueden incendiar las celdas de tipo PASILLO (los muros no se incendian)
+                # Los muros no se incendian
                 if celda_vecina and celda_vecina.estado_base == EstadoCelda.PASILLO:
                     if celda_vecina not in nuevas_celdas_fuego:
                         nuevas_celdas_fuego.append(celda_vecina)
 
-        # 3. Aplicar el estado FUEGO a las nuevas celdas
+        # Aplica el estado FUEGO a las nuevas celdas
         for celda in nuevas_celdas_fuego:
             celda.estado_base = EstadoCelda.FUEGO
-
-        return nuevas_celdas_fuego
 
     def _calcular_distancia(self, r, c, pos_referencia):
         if pos_referencia is None:

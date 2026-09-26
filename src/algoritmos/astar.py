@@ -1,0 +1,77 @@
+import heapq
+from src.base_map.celda import EstadoCelda
+
+
+def heuristica_manhattan(pos, pos_meta):
+    return abs(pos[0] - pos_meta[0]) + abs(pos[1] - pos_meta[1])
+
+
+def busqueda_astar(mapa, inicio=None):
+    """
+    Ejecuta el algoritmo de búsqueda A* utilizando la distancia de Manhattan como heurística.
+    f(n) = g(n) + h(n)
+    """
+    pos_inicio = inicio if inicio else mapa.inicio
+    salida = mapa.salida
+
+    if not pos_inicio or not salida:
+        return {"exito": False, "camino": [], "costo_total": float('inf'), "nodos_visitados": 0}
+
+    # Cola de prioridad
+    contador = 0
+    h_inicio = heuristica_manhattan(pos_inicio, salida)
+    pq = [(h_inicio, contador, pos_inicio, [pos_inicio], 0)]
+
+    # Diccionario para almacenar el menor g_score conocido para cada posición
+    g_scores = {pos_inicio: 0}
+    nodos_visitados = set()
+
+    movimientos = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
+    while pq:
+        f_val, _, pos_actual, camino, g_cost = heapq.heappop(pq)
+
+        if pos_actual in nodos_visitados:
+            continue
+
+        nodos_visitados.add(pos_actual)
+
+        if pos_actual == salida:
+            return {
+                "exito": True,
+                "camino": camino,
+                "costo_total": g_cost,
+                "nodos_visitados": len(nodos_visitados)
+            }
+
+        r, c = pos_actual
+
+        for dr, dc in movimientos:
+            nr, nc = r + dr, c + dc
+            pos_vecino = (nr, nc)
+
+            celda = mapa.obtener_celda(nr, nc)
+            if celda is None:
+                continue
+
+            estado = celda.obtener_estado()
+            # Verificar si la celda es transitable
+            if estado not in [EstadoCelda.MURO, EstadoCelda.FUEGO, EstadoCelda.OCUPADO]:
+                costo_paso = celda.obtener_costo()
+                nuevo_g = g_cost + costo_paso
+
+                # Si encontramos un camino más corto hacia pos_vecino
+                if pos_vecino not in g_scores or nuevo_g < g_scores[pos_vecino]:
+                    g_scores[pos_vecino] = nuevo_g
+                    h_val = heuristica_manhattan(pos_vecino, salida)
+                    f_val = nuevo_g + h_val
+
+                    contador += 1
+                    heapq.heappush(pq, (f_val, contador, pos_vecino, camino + [pos_vecino], nuevo_g))
+
+    return {
+        "exito": False,
+        "camino": [],
+        "costo_total": float('inf'),
+        "nodos_visitados": len(nodos_visitados)
+    }

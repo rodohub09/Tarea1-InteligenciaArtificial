@@ -1,10 +1,16 @@
-from collections import deque
+import heapq
 from src.base_map.celda import EstadoCelda
 
 
-def busqueda_bfs(mapa, inicio=None):
+def heuristica_manhattan(pos, pos_meta):
+    return abs(pos[0] - pos_meta[0]) + abs(pos[1] - pos_meta[1])
+
+
+def busqueda_greedy(mapa, inicio=None):
     """
-    Ejecuta el algoritmo de Búsqueda en Anchura (BFS).
+    Ejecuta el algoritmo de Búsqueda Avara (Greedy Best-First Search) 
+    utilizando la distancia de Manhattan como heurística.
+    f(n) = h(n)
     """
     pos_inicio = inicio if inicio else mapa.inicio
     salida = mapa.salida
@@ -12,19 +18,23 @@ def busqueda_bfs(mapa, inicio=None):
     if not pos_inicio or not salida:
         return {"exito": False, "camino": [], "costo_total": float('inf'), "nodos_visitados": 0}
 
-    # Cola FIFO: almacena elementos (posicion_actual, camino_recorrido, costo_acumulado)
-    cola = deque([(pos_inicio, [pos_inicio], 0)])
+    # Cola de prioridad (heapq): almacena (h_val, contador, pos_actual, camino, costo_acumulado)
+    contador = 0
+    h_inicio = heuristica_manhattan(pos_inicio, salida)
+    pq = [(h_inicio, contador, pos_inicio, [pos_inicio], 0)]
+
     visitados = set([pos_inicio])
+
     movimientos = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-    while cola:
-        pos_actual, camino, costo = cola.popleft()
+    while pq:
+        h_val, _, pos_actual, camino, costo_acum = heapq.heappop(pq)
 
         if pos_actual == salida:
             return {
                 "exito": True,
                 "camino": camino,
-                "costo_total": costo,
+                "costo_total": costo_acum,
                 "nodos_visitados": len(visitados)
             }
 
@@ -46,7 +56,10 @@ def busqueda_bfs(mapa, inicio=None):
             if estado not in [EstadoCelda.MURO, EstadoCelda.FUEGO, EstadoCelda.OCUPADO]:
                 visitados.add(pos_vecino)
                 costo_paso = celda.obtener_costo()
-                cola.append((pos_vecino, camino + [pos_vecino], costo + costo_paso))
+                nuevo_h = heuristica_manhattan(pos_vecino, salida)
+
+                contador += 1
+                heapq.heappush(pq, (nuevo_h, contador, pos_vecino, camino + [pos_vecino], costo_acum + costo_paso))
 
     return {
         "exito": False,
