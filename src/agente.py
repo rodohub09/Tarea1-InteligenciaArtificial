@@ -2,25 +2,29 @@ from src.algoritmos.bfs import busqueda_bfs
 from src.algoritmos.dfs import busqueda_dfs
 from src.algoritmos.astar import busqueda_astar
 from src.algoritmos.greedy import busqueda_greedy
+from src.algoritmos.genetico import busqueda_genetica
 from src.base_map.celda import EstadoCelda
 
 
 class Agente:
     """
     Representa un agente de búsqueda para la simulación de escape de incendio.
-    Posee dos flags booleanas que determinan el éxito o fracaso en el escape.
+    Soporta interacción multi-agente, movimientos ortogonales y búsqueda mediante
+    algoritmos no informados (BFS, DFS), informados (A*, Greedy) y evolucionativos (Genético).
     """
 
     def __init__(self, id_agente, mapa, posicion_inicial=None):
         self.id_agente = id_agente
         self.mapa = mapa
-
+        
+        # Posición inicial: si no se especifica, usa la posición de inicio del mapa
         self.posicion_actual = posicion_inicial if posicion_inicial else mapa.inicio
         self.camino = []
         self.costo_total = 0
         self.ha_escapado = False
         self.inhabilitado = False
 
+        # Registrar al agente en la celda inicial y verificar si la celda está en fuego
         if self.posicion_actual:
             celda_inicio = self.mapa.obtener_celda(*self.posicion_actual)
             if celda_inicio:
@@ -70,6 +74,7 @@ class Agente:
     def buscar_camino(self, algoritmo="bfs"):
         """
         Ejecuta el algoritmo de búsqueda especificado desde la posición actual del agente.
+        Opciones disponibles: 'bfs', 'dfs', 'astar' (o 'a*'), 'greedy', 'genetico' (o 'ga').
         """
         if self.verificar_estado():
             return {"exito": False, "camino": [], "costo_total": float('inf'), "nodos_visitados": 0, "mensaje": "Agente inhabilitado por fuego"}
@@ -79,12 +84,14 @@ class Agente:
             "dfs": busqueda_dfs,
             "astar": busqueda_astar,
             "a*": busqueda_astar,
-            "greedy": busqueda_greedy
+            "greedy": busqueda_greedy,
+            "genetico": busqueda_genetica,
+            "ga": busqueda_genetica
         }
 
         nombre_alg = algoritmo.lower()
         if nombre_alg not in algoritmos_disponibles:
-            raise ValueError(f"Algoritmo '{algoritmo}' no reconocido. Opciones disponibles: 'bfs', 'dfs', 'astar', 'greedy'")
+            raise ValueError(f"Algoritmo '{algoritmo}' no reconocido. Opciones disponibles: 'bfs', 'dfs', 'astar', 'greedy', 'genetico'")
 
         funcion_busqueda = algoritmos_disponibles[nombre_alg]
         resultado = funcion_busqueda(self.mapa, inicio=self.posicion_actual)
@@ -97,7 +104,8 @@ class Agente:
 
     def esperar(self):
         """
-        EL agente permanece en la posición actual durante 1 turno.
+        Acción de esperar: el agente permanece en la posición actual durante 1 turno.
+        Si la celda está en fuego, el agente pasa a estar inhabilitado.
         """
         if self.verificar_estado():
             return False
@@ -109,7 +117,8 @@ class Agente:
 
     def mover_a(self, nueva_posicion):
         """
-        Determina el movimiento del agente a una nueva celda o si debe esperar
+        Mueve al agente a una nueva posición o espera si es la misma posición.
+        Si la celda destino o actual está en fuego, el agente pasa a estar inhabilitado.
         """
         if self.verificar_estado():
             return False
