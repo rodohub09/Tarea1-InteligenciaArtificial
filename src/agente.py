@@ -74,7 +74,7 @@ class Agente:
     def buscar_camino(self, algoritmo="bfs"):
         """
         Ejecuta el algoritmo de búsqueda especificado desde la posición actual del agente.
-        Opciones disponibles: 'bfs', 'dfs', 'astar' (o 'a*'), 'greedy', 'genetico' (o 'ga').
+        Opciones disponibles: 'bfs', 'dfs', 'astar' (o 'a*'), 'greedy', 'genetico' (o 'genético', 'ga').
         """
         if self.verificar_estado():
             return {"exito": False, "camino": [], "costo_total": float('inf'), "nodos_visitados": 0, "mensaje": "Agente inhabilitado por fuego"}
@@ -86,10 +86,12 @@ class Agente:
             "a*": busqueda_astar,
             "greedy": busqueda_greedy,
             "genetico": busqueda_genetica,
+            "genético": busqueda_genetica,
             "ga": busqueda_genetica
         }
 
-        nombre_alg = algoritmo.lower()
+        # Normalizar tilde y minúsculas
+        nombre_alg = algoritmo.lower().replace("é", "e")
         if nombre_alg not in algoritmos_disponibles:
             raise ValueError(f"Algoritmo '{algoritmo}' no reconocido. Opciones disponibles: 'bfs', 'dfs', 'astar', 'greedy', 'genetico'")
 

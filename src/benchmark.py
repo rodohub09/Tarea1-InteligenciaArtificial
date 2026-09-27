@@ -13,7 +13,7 @@ class Simulacion:
     Ejecuta una iteración/corrida de simulación para un algoritmo dado en un mapa.
     - 80 agentes simultáneos que inician en mapa.inicio.
     - Propagación de fuego cada 3 turnos.
-    - Recorrido turno a turno respetando capacidad de celdas (3 por pasillo).
+    - Recalcula ruta ÚNICAMENTE si el fuego bloquea directamente su camino planificado.
     """
 
     def __init__(self, ruta_mapa, algoritmo, num_agentes=80, max_turnos=300):
@@ -64,6 +64,27 @@ class Simulacion:
 
                 cola_pasos = rutas[a.id_agente]
 
+                # Verificar si el fuego está en su camino directo
+                fuego_en_camino_directo = False
+                if cola_pasos:
+                    for pos in cola_pasos:
+                        celda_paso = mapa.obtener_celda(*pos)
+                        if celda_paso and celda_paso.obtener_estado() == EstadoCelda.FUEGO:
+                            fuego_en_camino_directo = True
+                            break
+
+                # Recalcular ruta ÚNICAMENTE si hay fuego en su camino directo
+                if fuego_en_camino_directo:
+                    nueva_busqueda = a.buscar_camino(self.algoritmo)
+                    if nueva_busqueda["exito"] and len(nueva_busqueda["camino"]) > 1:
+                        rutas[a.id_agente] = deque(nueva_busqueda["camino"][1:])
+                        cola_pasos = rutas[a.id_agente]
+                    else:
+                        rutas[a.id_agente] = deque()
+                        a.esperar()
+                        continue
+
+                # Avanzar en la siguiente casilla de su camino directo
                 if cola_pasos:
                     siguiente_pos = cola_pasos[0]
                     exito_mov = a.mover_a(siguiente_pos)
@@ -72,25 +93,9 @@ class Simulacion:
                         cola_pasos.popleft()
                         if a.ha_escapado:
                             turnos_escape[a.id_agente] = turno
-                    elif not exito_mov and not a.inhabilitado:
-                        pos_pos = a.posicion_actual
-                        if pos_pos not in cache_rutas:
-                            nueva_busqueda = a.buscar_camino(self.algoritmo)
-                            cache_rutas[pos_pos] = nueva_busqueda
-                        else:
-                            nueva_busqueda = cache_rutas[pos_pos]
-
-                        if nueva_busqueda["exito"]:
-                            rutas[a.id_agente] = deque(nueva_busqueda["camino"][1:])
                 else:
                     if not a.ha_escapado:
-                        pos_pos = a.posicion_actual
-                        if pos_pos not in cache_rutas:
-                            nueva_busqueda = a.buscar_camino(self.algoritmo)
-                            cache_rutas[pos_pos] = nueva_busqueda
-                        else:
-                            nueva_busqueda = cache_rutas[pos_pos]
-
+                        nueva_busqueda = a.buscar_camino(self.algoritmo)
                         if nueva_busqueda["exito"] and len(nueva_busqueda["camino"]) > 1:
                             rutas[a.id_agente] = deque(nueva_busqueda["camino"][1:])
                             siguiente_pos = rutas[a.id_agente][0]
@@ -104,8 +109,6 @@ class Simulacion:
             # B. Propagar el fuego cada 3 turnos (turno % 3 == 0)
             if turno % 3 == 0:
                 mapa.propagar_fuego()
-                # Invalidar caché de rutas tras propagación de fuego para recalcular si es necesario
-                cache_rutas.clear()
 
                 for a in agentes:
                     if not a.ha_escapado and not a.inhabilitado:
@@ -145,7 +148,6 @@ class Benchmark:
             if res["turno_ultimo_superviviente"] is not None:
                 turnos_ultimos_supervivientes.append(res["turno_ultimo_superviviente"])
 
-            # Contador de iteraciones en tiempo real
             tiempo_transcurrido = time.time() - tiempo_inicio
             pct = (i / self.num_iteraciones) * 100.0
             
