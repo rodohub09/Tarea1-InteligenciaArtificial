@@ -12,15 +12,17 @@ class Simulacion:
     """
     Ejecuta una iteración/corrida de simulación para un algoritmo dado en un mapa.
     - 80 agentes simultáneos que inician en mapa.inicio.
-    - Propagación de fuego cada 3 turnos.
+    - Propagación de fuego cada 3 turnos con factor de propagación configurable (defecto 0.5).
+    - Salida temprana si la celda de SALIDA es alcanzada por el fuego.
     - Recalcula ruta ÚNICAMENTE si el fuego bloquea directamente su camino planificado.
     """
 
-    def __init__(self, ruta_mapa, algoritmo, num_agentes=80, max_turnos=300):
+    def __init__(self, ruta_mapa, algoritmo, num_agentes=80, max_turnos=300, factor_propagacion=0.5):
         self.ruta_mapa = ruta_mapa
         self.algoritmo = algoritmo
         self.num_agentes = num_agentes
         self.max_turnos = max_turnos
+        self.factor_propagacion = factor_propagacion
 
     def ejecutar(self):
         # 1. Cargar el mapa (genera 1 fuego aleatorio a radio >= 5)
@@ -106,9 +108,15 @@ class Simulacion:
                         else:
                             a.esperar()
 
-            # B. Propagar el fuego cada 3 turnos (turno % 3 == 0)
+            # B. Propagar el fuego cada 3 turnos usando el factor de propagación
             if turno % 3 == 0:
-                mapa.propagar_fuego()
+                mapa.propagar_fuego(self.factor_propagacion)
+
+                # Condición de salida temprana: Si la celda de SALIDA es bloqueada/incendiada por fuego
+                celda_salida = mapa.obtener_celda(*mapa.salida)
+                if celda_salida and celda_salida.obtener_estado() == EstadoCelda.FUEGO:
+                    # Ningún agente restante podrá escapar, se finaliza la iteración tempranamente
+                    break
 
                 for a in agentes:
                     if not a.ha_escapado and not a.inhabilitado:
@@ -130,10 +138,11 @@ class Benchmark:
     Ejecuta el benchmark completo con contador de iteraciones en tiempo real.
     """
 
-    def __init__(self, ruta_mapa, num_iteraciones=200, num_agentes=80):
+    def __init__(self, ruta_mapa, num_iteraciones=200, num_agentes=80, factor_propagacion=0.5):
         self.ruta_mapa = ruta_mapa
         self.num_iteraciones = num_iteraciones
         self.num_agentes = num_agentes
+        self.factor_propagacion = factor_propagacion
 
     def evaluar_algoritmo(self, algoritmo):
         tiempo_inicio = time.time()
@@ -141,7 +150,11 @@ class Benchmark:
         turnos_ultimos_supervivientes = []
 
         for i in range(1, self.num_iteraciones + 1):
-            sim = Simulacion(self.ruta_mapa, algoritmo, num_agentes=self.num_agentes)
+            sim = Simulacion(
+                self.ruta_mapa, algoritmo,
+                num_agentes=self.num_agentes,
+                factor_propagacion=self.factor_propagacion
+            )
             res = sim.ejecutar()
 
             total_supervivientes += res["supervivientes"]
@@ -206,7 +219,7 @@ class Benchmark:
 def imprimir_reporte(nombre_escenario, resultados):
     print(f"\n==========================================================================================")
     print(f" BENCHMARK REPORT - ESCENARIO: {nombre_escenario}")
-    print(f" Configuración: 80 agentes | 200 iteraciones | Propagación fuego cada 3 turnos")
+    print(f" Configuración: 80 agentes | 200 iteraciones | Propagación fuego cada 3 turnos (Factor 0.5)")
     print(f"==========================================================================================\n")
 
     header = f"| {'Algoritmo':<10} | {'Supervivencia (%)':<18} | {'Media Ult. Sup.':<16} | {'Std Dev':<10} | {'Mín':<6} | {'Máx':<6} | {'Tiempo (s)':<10} |"

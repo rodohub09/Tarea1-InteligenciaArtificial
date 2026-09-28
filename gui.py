@@ -19,6 +19,7 @@ class SimuladorGUI:
         self.algoritmo_var = tk.StringVar(value="BFS")
         self.num_agentes_var = tk.IntVar(value=80)
         self.frecuencia_fuego_var = tk.IntVar(value=3)
+        self.factor_propagacion_var = tk.DoubleVar(value=0.5)
         self.velocidad_ms_var = tk.IntVar(value=200)
 
         # Estado de la simulación
@@ -68,6 +69,14 @@ class SimuladorGUI:
         tk.Label(panel_controles, text="Número de Agentes:", font=("Helvetica", 10, "bold"), bg="#34495e", fg="#ecf0f1").pack(anchor="w")
         sp_agentes = tk.Spinbox(panel_controles, from_=1, to=100, textvariable=self.num_agentes_var, width=10, font=("Helvetica", 10))
         sp_agentes.pack(anchor="w", pady=(2, 10))
+
+        # Factor de Propagación de Fuego (0.1 a 1.0)
+        tk.Label(panel_controles, text="Factor Propagación Fuego:", font=("Helvetica", 10, "bold"), bg="#34495e", fg="#ecf0f1").pack(anchor="w")
+        slider_factor = tk.Scale(
+            panel_controles, from_=0.1, to=1.0, resolution=0.1, orient=tk.HORIZONTAL,
+            variable=self.factor_propagacion_var, bg="#34495e", fg="#ecf0f1", highlightthickness=0
+        )
+        slider_factor.pack(fill=tk.X, pady=(2, 10))
 
         # Velocidad de Animación (MS)
         tk.Label(panel_controles, text="Velocidad (ms por turno):", font=("Helvetica", 10, "bold"), bg="#34495e", fg="#ecf0f1").pack(anchor="w")
@@ -146,6 +155,9 @@ class SimuladorGUI:
         self.lbl_activos = tk.Label(panel_stats, text="En Camino: 0", font=("Helvetica", 11, "bold"), bg="#34495e", fg="#f1c40f")
         self.lbl_activos.pack(side=tk.LEFT, expand=True)
 
+        self.lbl_inicio = tk.Label(panel_stats, text="En Inicio: 0", font=("Helvetica", 11, "bold"), bg="#34495e", fg="#3498db")
+        self.lbl_inicio.pack(side=tk.LEFT, expand=True)
+
     def cargar_mapa_inicial(self):
         self.simulando = False
         self.pausado = False
@@ -219,14 +231,26 @@ class SimuladorGUI:
 
                 self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="#bdc3c7", width=1)
 
-                # Si es inicio o salida, dibujar letra
+                # Si es inicio o salida, dibujar letra y conteo de agentes dentro de la propia casilla
                 if celda.es_inicio:
-                    self.canvas.create_text((x1 + x2)/2, (y1 + y2)/2, text="I", fill="white", font=("Helvetica", int(cell_size*0.5), "bold"))
+                    if celda.agentes > 0:
+                        cx = (x1 + x2) / 2
+                        cy = (y1 + y2) / 2
+                        r_dot = cell_size * 0.42
+                        self.canvas.create_oval(cx - r_dot, cy - r_dot, cx + r_dot, cy + r_dot, fill="#27ae60", outline="#ffffff", width=2)
+                        self.canvas.create_text(cx, cy, text=f"I\n{celda.agentes}", fill="white", font=("Helvetica", max(7, int(cell_size*0.30)), "bold"))
+                    else:
+                        self.canvas.create_text((x1 + x2)/2, (y1 + y2)/2, text="I", fill="white", font=("Helvetica", int(cell_size*0.5), "bold"))
                 elif celda.es_salida:
-                    self.canvas.create_text((x1 + x2)/2, (y1 + y2)/2, text="E", fill="white", font=("Helvetica", int(cell_size*0.5), "bold"))
-
-                # Dibujar número de agentes si los hay
-                if celda.agentes > 0 and not celda.es_inicio:
+                    if celda.agentes > 0:
+                        cx = (x1 + x2) / 2
+                        cy = (y1 + y2) / 2
+                        r_dot = cell_size * 0.42
+                        self.canvas.create_oval(cx - r_dot, cy - r_dot, cx + r_dot, cy + r_dot, fill="#2980b9", outline="#ffffff", width=2)
+                        self.canvas.create_text(cx, cy, text=f"E\n{celda.agentes}", fill="white", font=("Helvetica", max(7, int(cell_size*0.30)), "bold"))
+                    else:
+                        self.canvas.create_text((x1 + x2)/2, (y1 + y2)/2, text="E", fill="white", font=("Helvetica", int(cell_size*0.5), "bold"))
+                elif celda.agentes > 0:
                     color_agente = "#f1c40f" if celda.agentes < 3 else "#e67e22"
                     cx = (x1 + x2) / 2
                     cy = (y1 + y2) / 2
@@ -354,10 +378,19 @@ class SimuladorGUI:
                     else:
                         a.esperar()
 
-        # B. Propagación de fuego cada N turnos
+        # B. Propagación de fuego cada N turnos con factor de propagación
         freq_fuego = self.frecuencia_fuego_var.get()
         if self.turno_actual % freq_fuego == 0:
-            self.mapa.propagar_fuego()
+            self.mapa.propagar_fuego(self.factor_propagacion_var.get())
+            
+            # Condición de salida temprana: si la salida fue consumida por el fuego
+            celda_salida = self.mapa.obtener_celda(*self.mapa.salida)
+            if celda_salida and celda_salida.obtener_estado() == EstadoCelda.FUEGO:
+                self.actualizar_estadisticas()
+                self.dibujar_mapa()
+                messagebox.showinfo("Simulación Finalizada", f"La salida ha sido bloqueada por el fuego en el turno {self.turno_actual}.")
+                return False
+
             for a in self.agentes:
                 if not a.ha_escapado and not a.inhabilitado:
                     a.verificar_estado()
@@ -371,10 +404,14 @@ class SimuladorGUI:
         inhabilitados = sum(1 for a in self.agentes if a.inhabilitado)
         en_camino = len(self.agentes) - escapados - inhabilitados
 
+        celda_ini = self.mapa.obtener_celda(*self.mapa.inicio) if self.mapa else None
+        en_inicio = celda_ini.agentes if celda_ini else 0
+
         self.lbl_turno.config(text=f"Turno: {self.turno_actual}")
         self.lbl_escapados.config(text=f"Escapados: {escapados} / {len(self.agentes)}")
         self.lbl_inhabilitados.config(text=f"Inhabilitados: {inhabilitados}")
         self.lbl_activos.config(text=f"En Camino: {en_camino}")
+        self.lbl_inicio.config(text=f"En Inicio: {en_inicio}")
 
 
 if __name__ == "__main__":
