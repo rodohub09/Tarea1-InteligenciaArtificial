@@ -66,9 +66,3 @@ python entrenar_genetico.py
 Esto evolucionará la población a lo largo de los escenarios y guardará el mejor cromosoma en `models/ga_model.json`.
 
 ---
-    │   ├── greedy.py
-    │   └── genetico.py
-    └── base_map/
-        ├── celda.py        # Clase Celda y Enum EstadoCelda
-        └── mapa.py         # Cargador de mapas y propagación de fuego
-```
