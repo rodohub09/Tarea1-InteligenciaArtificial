@@ -1,4 +1,4 @@
-# Simulador de Escape de Incendios - Inteligencia Artificial (Tarea 1)
+# Escape de la Torre - Inteligencia Artificial (Tarea 1)
 
 Este proyecto implementa un simulador dinámico de evacuación de incendios en grillas de 25$\times$25 celdas utilizando agentes inteligentes impulsados por 5 algoritmos de búsqueda: **BFS**, **DFS**, **A\***, **Greedy Best-First Search** y **Algoritmo Genético**.
 
@@ -6,7 +6,7 @@ Incluye una **interfaz gráfica interactiva (GUI)** basada en Tkinter y una **su
 
 ---
 
-## 📋 Requisitos del Sistema
+## Requisitos del Sistema
 
 - **Python 3.10 o superior** (probado en Python 3.12).
 - **Librerías estándar de Python** (no requiere instalación de paquetes de terceros):
@@ -17,7 +17,7 @@ Incluye una **interfaz gráfica interactiva (GUI)** basada en Tkinter y una **su
 
 ---
 
-## 🚀 Instrucciones de Ejecución
+## Instrucciones de Ejecución
 
 ### 1. Interfaz Gráfica de Usuario (GUI)
 
@@ -66,48 +66,6 @@ python entrenar_genetico.py
 Esto evolucionará la población a lo largo de los escenarios y guardará el mejor cromosoma en `models/ga_model.json`.
 
 ---
-
-## ⚙️ Reglas y Dinámica del Entorno
-
-1. **Celdas y Capacidad**:
-   - `PASILLO`: Permite hasta 3 agentes simultáneos. Al alcanzar el límite pasa a estado `OCUPADO` ($\infty$ costo).
-   - `INICIO` (`I`) y `SALIDA` (`E`): Tienen **capacidad ilimitada** y muestran insignias numéricas con la cantidad de agentes en su interior.
-   - `MURO`: Impide el tránsito.
-   - `FUEGO`: Inhabilita instantáneamente a cualquier agente atrapado.
-
-2. **Propagación del Fuego**:
-   - Se expande cada 3 turnos a celdas contiguas con una probabilidad $p = 0.5$ (configurable).
-
-3. **Recálculo Reactivo de Rutas**:
-   - Los agentes **únicamente recalculan su ruta** si detectan que el fuego bloquea directamente su camino planificado (`cola_pasos`).
-
-4. **Salida Temprana**:
-   - La iteración finaliza inmediatamente si la celda de `SALIDA` es destruida por el fuego.
-
----
-
-## 📁 Estructura del Proyecto
-
-```text
-Tarea1-InteligenciaArtificial/
-├── gui.py                  # Interfaz gráfica interactiva Tkinter
-├── main.py                 # Punto de entrada principal para el Benchmark
-├── entrenar_genetico.py    # Script de entrenamiento offline para el Algoritmo Genético
-├── informe_simulacion.tex  # Documento de informe formal en LaTeX
-├── README.md               # Instrucciones y documentación del repositorio
-├── maps/                   # Archivos de texto con mapas de 25x25 celdas
-│   ├── mapa_cuello_botella.txt
-│   ├── mapa_corporativo.txt
-│   └── mapa_semiabierto.txt
-├── models/
-│   └── ga_model.json       # Modelo pre-entrenado del Algoritmo Genético
-└── src/
-    ├── agente.py           # Clase Agente y lógica de recálculo de caminos
-    ├── benchmark.py        # Motor de simulación y generador de reportes
-    ├── algoritmos/         # Implementación de los 5 algoritmos de búsqueda
-    │   ├── bfs.py
-    │   ├── dfs.py
-    │   ├── astar.py
     │   ├── greedy.py
     │   └── genetico.py
     └── base_map/
